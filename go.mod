@@ -1,4 +1,4 @@
-module goignore
+module github.com/botondmeister/goignore
 
 go 1.24
 
