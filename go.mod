@@ -1,4 +1,4 @@
-module github.com/kivattt/goignore
+module github.com/botondmester/goignore
 
 go 1.21.5
 
