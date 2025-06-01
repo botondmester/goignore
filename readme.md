@@ -1,5 +1,7 @@
 # goignore
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/botondmester/goignore.svg)](https://pkg.go.dev/github.com/botondmester/goignore)
+
 A simple gitignore parser for `Go`
 
 ## Install
