@@ -8,11 +8,14 @@ import (
 
 // this is my own implementation of strings.Split()
 // for my use case, this is way faster than the stdlib one
+// this is specialized for splitting paths, so it only splits it into
+// at most 1024 components, as that should be enough for any path
 func mySplit(s string, sep byte) []string {
 	pathComponents := make([]string, 1024) // should be enough for all cases
 	idx := 0
 	for l, r := 0, 0; r <= len(s); r++ {
 		if r == len(s) || s[r] == sep {
+			// only add component if it is not empty
 			if r > l {
 				pathComponents[idx] = s[l:r]
 				idx++
@@ -20,9 +23,15 @@ func mySplit(s string, sep byte) []string {
 			l = r + 1
 		}
 	}
+	// truncate the slice to the actual number of components
 	return pathComponents[:idx]
 }
 
+// Represents a single rule in a .gitignore file
+// Components is a list of path components to match against
+// Negate is true if the rule negates the match (i.e. starts with '!')
+// OnlyDirectory is true if the rule matches only directories (i.e. ends with '/')
+// Relative is true if the rule is relative (i.e. starts with '/')
 type Rule struct {
 	Components    []string
 	Negate        bool
@@ -39,6 +48,7 @@ func stringMatch(str string, pattern string) bool {
 
 		switch pattern[j] {
 		case '?':
+			// just skip the character in str
 			j++
 		case '*':
 			// stinky recursive step
@@ -50,6 +60,8 @@ func stringMatch(str string, pattern string) bool {
 				}
 			}
 			return found
+		// TODO: handle character classes like [a-z] and [^a-z], and add tests for them
+		// case '[':
 		default:
 			if str[i] != pattern[j] {
 				return false
@@ -64,7 +76,10 @@ func stringMatch(str string, pattern string) bool {
 	return true
 }
 
-func matchComponents(path []string, components []string, onlyDirectory bool) (bool, bool) {
+// Tries to match the path components against the rule components
+// matches is true if the path matches the rule, final is true if the rule matched the whole path
+// the final parameter is used for rules that match directories only
+func matchComponents(path []string, components []string, onlyDirectory bool) (matches bool, final bool) {
 	i := 0
 	for ; i < len(components); i++ {
 		if i >= len(path) {
@@ -76,6 +91,7 @@ func matchComponents(path []string, components []string, onlyDirectory bool) (bo
 			for j := len(path) - 1; j >= i; j-- {
 				match, final := matchComponents(path[j:], components[i+1:], onlyDirectory)
 				if match {
+					// pass final trough
 					return true, final
 				}
 			}
@@ -89,6 +105,7 @@ func matchComponents(path []string, components []string, onlyDirectory bool) (bo
 	return true, i == len(path) // if we matched all components, check if we are at the end of the path
 }
 
+// Tries to match the path against the rule
 func (r *Rule) Match(path string) bool {
 	hasSuffix := strings.HasSuffix(path, "/")
 	pathComponents := mySplit(path, '/')
@@ -110,10 +127,12 @@ func (r *Rule) Match(path string) bool {
 	return match && (!r.OnlyDirectory || r.OnlyDirectory && (!final || final && hasSuffix))
 }
 
+// Stores a list of rules for matching paths against .gitignore patterns
 type Gitignore struct {
 	Rules []Rule
 }
 
+// Creates a Gitignore from a list of patterns (lines in a .gitignore file)
 func CompileIgnoreLines(patterns []string) *Gitignore {
 	gitignore := &Gitignore{
 		Rules: make([]Rule, 0, len(patterns)),
@@ -134,6 +153,7 @@ func CompileIgnoreLines(patterns []string) *Gitignore {
 	return gitignore
 }
 
+// Same as CompileIgnoreLines, but reads from a file
 func CompileIgnoreFile(filename string) (*Gitignore, error) {
 	lines, err := os.ReadFile(filename)
 
@@ -159,6 +179,7 @@ func createRule(pattern string) Rule {
 		pattern = pattern[1:] // skip the '\'
 	}
 
+	// check if the pattern ends with a '/', which means it only matches directories
 	if pattern[len(pattern)-1] == '/' {
 		onlyDirectory = true
 	}
@@ -174,6 +195,7 @@ func createRule(pattern string) Rule {
 	}
 }
 
+// Tries to match the path to all the rules in the gitignore
 func (g *Gitignore) Match(path string) bool {
 	path = filepath.ToSlash(path)
 	matched := false

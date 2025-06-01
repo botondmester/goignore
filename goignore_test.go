@@ -35,6 +35,45 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+func ExampleCompileIgnoreLines() {
+	ignoreObject := CompileIgnoreLines([]string{"node_modules", "*.out", "foo/*.c"})
+
+	// You can test the ignoreObject against various paths using the
+	// "Match()" interface method. This pretty much is up to
+	// the users interpretation. In the case of a ".gitignore" file,
+	// a "match" would indicate that a given path would be ignored.
+	fmt.Println(ignoreObject.Match("node_modules/test/foo.js"))
+	fmt.Println(ignoreObject.Match("node_modules2/test.out"))
+	fmt.Println(ignoreObject.Match("test/foo.js"))
+
+	// Output:
+	// true
+	// true
+	// false
+}
+
+func ExampleCompileIgnoreFile() {
+	ignoreObject, err := CompileIgnoreFile(".gitignore")
+
+	// err returns an error from os.ReadFile()
+	if err != nil {
+		fmt.Println("Error reading .gitignore file:", err)
+		return
+	}
+
+	// You can test the ignoreObject against various paths using the
+	// "Match()" interface method.
+	// int this example, we test paths against the .gitignore file of this package.
+	fmt.Println(ignoreObject.Match("bin/goignore.so"))
+	fmt.Println(ignoreObject.Match("goignore.test"))
+	fmt.Println(ignoreObject.Match("go.mod"))
+
+	// Output:
+	// true
+	// true
+	// false
+}
+
 // Validate the correct handling of the negation operator "!"
 func TestCompileIgnoreLines_HandleIncludePattern(t *testing.T) {
 	object := CompileIgnoreLines([]string{
@@ -107,23 +146,6 @@ func TestCompileIgnoreLines_HandleLeadingSlashPath(t *testing.T) {
 
 	assert.Equal(t, true, object.Match("hello.c"), "hello.c should match")
 	assert.Equal(t, false, object.Match("foo/hello.c"), "foo/hello.c should not match")
-}
-
-func ExampleCompileIgnoreLines() {
-	ignoreObject := CompileIgnoreLines([]string{"node_modules", "*.out", "foo/*.c"})
-
-	// You can test the ignoreObject against various paths using the
-	// "MatchesPath()" interface method. This pretty much is up to
-	// the users interpretation. In the case of a ".gitignore" file,
-	// a "match" would indicate that a given path would be ignored.
-	fmt.Println(ignoreObject.Match("node_modules/test/foo.js"))
-	fmt.Println(ignoreObject.Match("node_modules2/test.out"))
-	fmt.Println(ignoreObject.Match("test/foo.js"))
-
-	// Output:
-	// true
-	// true
-	// false
 }
 
 func TestCompileIgnoreLines_CheckNestedDotFiles(t *testing.T) {
