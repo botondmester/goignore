@@ -79,7 +79,7 @@ func stringMatch(str string, pattern string) bool {
 // Tries to match the path components against the rule components
 // matches is true if the path matches the rule, final is true if the rule matched the whole path
 // the final parameter is used for rules that match directories only
-func matchComponents(path []string, components []string, onlyDirectory bool) (matches bool, final bool) {
+func matchComponents(path []string, components []string) (matches bool, final bool) {
 	i := 0
 	for ; i < len(components); i++ {
 		if i >= len(path) {
@@ -89,7 +89,7 @@ func matchComponents(path []string, components []string, onlyDirectory bool) (ma
 		if components[i] == "**" {
 			// stinky recursive step
 			for j := len(path) - 1; j >= i; j-- {
-				match, final := matchComponents(path[j:], components[i+1:], onlyDirectory)
+				match, final := matchComponents(path[j:], components[i+1:])
 				if match {
 					// pass final trough
 					return true, final
@@ -113,7 +113,7 @@ func (r *Rule) MatchesPath(path string) bool {
 	if !r.Relative {
 		// stinky recursive step
 		for j := len(pathComponents) - 1; j >= 0; j-- {
-			match, final := matchComponents(pathComponents[j:], r.Components, r.OnlyDirectory)
+			match, final := matchComponents(pathComponents[j:], r.Components)
 			if match {
 				return !r.OnlyDirectory || r.OnlyDirectory && (!final || final && hasSuffix)
 			}
@@ -122,7 +122,7 @@ func (r *Rule) MatchesPath(path string) bool {
 		return false
 	}
 
-	match, final := matchComponents(pathComponents, r.Components, r.OnlyDirectory)
+	match, final := matchComponents(pathComponents, r.Components)
 
 	return match && (!r.OnlyDirectory || r.OnlyDirectory && (!final || final && hasSuffix))
 }
