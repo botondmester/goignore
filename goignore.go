@@ -106,7 +106,7 @@ func matchComponents(path []string, components []string, onlyDirectory bool) (ma
 }
 
 // Tries to match the path against the rule
-func (r *Rule) Match(path string) bool {
+func (r *Rule) MatchesPath(path string) bool {
 	hasSuffix := strings.HasSuffix(path, "/")
 	pathComponents := mySplit(path, '/')
 
@@ -128,13 +128,13 @@ func (r *Rule) Match(path string) bool {
 }
 
 // Stores a list of rules for matching paths against .gitignore patterns
-type Gitignore struct {
+type GitIgnore struct {
 	Rules []Rule
 }
 
 // Creates a Gitignore from a list of patterns (lines in a .gitignore file)
-func CompileIgnoreLines(patterns []string) *Gitignore {
-	gitignore := &Gitignore{
+func CompileIgnoreLines(patterns []string) *GitIgnore {
+	gitignore := &GitIgnore{
 		Rules: make([]Rule, 0, len(patterns)),
 	}
 
@@ -154,7 +154,7 @@ func CompileIgnoreLines(patterns []string) *Gitignore {
 }
 
 // Same as CompileIgnoreLines, but reads from a file
-func CompileIgnoreFile(filename string) (*Gitignore, error) {
+func CompileIgnoreFile(filename string) (*GitIgnore, error) {
 	lines, err := os.ReadFile(filename)
 
 	return CompileIgnoreLines(strings.Split(string(lines), "\n")), err
@@ -196,11 +196,11 @@ func createRule(pattern string) Rule {
 }
 
 // Tries to match the path to all the rules in the gitignore
-func (g *Gitignore) Match(path string) bool {
+func (g *GitIgnore) MatchesPath(path string) bool {
 	path = filepath.ToSlash(path)
 	matched := false
 	for _, rule := range g.Rules {
-		if rule.Match(path) {
+		if rule.MatchesPath(path) {
 			if !rule.Negate {
 				matched = true
 			} else {
