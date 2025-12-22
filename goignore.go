@@ -10,29 +10,58 @@ import (
 // for my use case, this is way faster than the stdlib one
 // the function expects a slice of sufficient length to get passed to it,
 // this avoids unnecessary memory allocation
-func mySplit(s string, sep byte, pathComponentsBuf []string) []string {
+func mySplitBuf(s string, sep byte, pathComponentsBuf []string) []string {
 	idx := 0
-	sLen := len(s)
-	l, r := 0, 0
-	for ; r < sLen; r++ {
-		if s[r] == sep {
-			// only add component if it is not empty
-			if r > l {
-				pathComponentsBuf[idx] = s[l:r]
-				idx++
-			}
-			l = r + 1
-		}
-	}
+	l := 0
+	for {
+		pos := strings.IndexByte(s[l:], sep)
 
+		if pos == -1 {
+			break
+		}
+
+		absolutePos := l + pos
+		if absolutePos > l {
+			pathComponentsBuf[idx] = s[l:absolutePos]
+			idx++
+		}
+		l = absolutePos + 1
+	}
 	// handle the last part separately
-	if r > l {
-		pathComponentsBuf[idx] = s[l:r]
+	if l < len(s) {
+		pathComponentsBuf[idx] = s[l:]
 		idx++
 	}
 
 	// truncate the slice to the actual number of components
 	return pathComponentsBuf[:idx]
+}
+
+// this is my own implementation of strings.Split()
+// for my use case, this is better than the stdlib one
+func mySplit(s string, sep byte) []string {
+	l := 0
+	buf := make([]string, 0, 32)
+	for {
+		pos := strings.IndexByte(s[l:], sep)
+
+		if pos == -1 {
+			break
+		}
+
+		absolutePos := l + pos
+		if absolutePos > l {
+			buf = append(buf, s[l:absolutePos])
+		}
+		l = absolutePos + 1
+	}
+
+	// handle the last part separately
+	if l < len(s) {
+		buf = append(buf, s[l:])
+	}
+
+	return buf
 }
 
 // Represents a single rule in a .gitignore file
@@ -173,7 +202,7 @@ func matchComponents(path []string, components []string) (matches bool, final bo
 // the function expects a buffer of sufficient size to get passed to it, this avoids excessive memory allocation
 func (r *Rule) matchesPath(path string, buf []string) bool {
 	hasSuffix := strings.HasSuffix(path, "/")
-	pathComponents := mySplit(path, '/', buf)
+	pathComponents := mySplitBuf(path, '/', buf)
 
 	if !r.Relative {
 		// stinky recursive step
@@ -258,7 +287,7 @@ func createRule(pattern string) Rule {
 	// split the pattern into components
 	// we use the default split function because this only runs once for each rule
 	// this saves memory compared to using mySplit
-	components := strings.Split(pattern, "/")
+	components := mySplit(pattern, '/')
 
 	return Rule{
 		Components:    components,
