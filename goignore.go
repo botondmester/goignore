@@ -8,23 +8,31 @@ import (
 
 // this is my own implementation of strings.Split()
 // for my use case, this is way faster than the stdlib one
-// this is specialized for splitting paths, so it only splits it into
-// at most 1024 components, as that should be enough for any path
-func mySplit(s string, sep byte) []string {
-	pathComponents := make([]string, 1024) // should be enough for all cases
+// the function expects a slice of sufficient length to get passed to it,
+// this avoids unnecessary memory allocation
+func mySplit(s string, sep byte, pathComponentsBuf []string) []string {
 	idx := 0
-	for l, r := 0, 0; r <= len(s); r++ {
-		if r == len(s) || s[r] == sep {
+	sLen := len(s)
+	l, r := 0, 0
+	for ; r < sLen; r++ {
+		if s[r] == sep {
 			// only add component if it is not empty
 			if r > l {
-				pathComponents[idx] = s[l:r]
+				pathComponentsBuf[idx] = s[l:r]
 				idx++
 			}
 			l = r + 1
 		}
 	}
+
+	// handle the last part separately
+	if r > l {
+		pathComponentsBuf[idx] = s[l:r]
+		idx++
+	}
+
 	// truncate the slice to the actual number of components
-	return pathComponents[:idx]
+	return pathComponentsBuf[:idx]
 }
 
 // Represents a single rule in a .gitignore file
@@ -162,9 +170,10 @@ func matchComponents(path []string, components []string) (matches bool, final bo
 }
 
 // Tries to match the path against the rule
-func (r *Rule) MatchesPath(path string) bool {
+// the function expects a buffer of sufficient size to get passed to it, this avoids excessive memory allocation
+func (r *Rule) matchesPath(path string, buf []string) bool {
 	hasSuffix := strings.HasSuffix(path, "/")
-	pathComponents := mySplit(path, '/')
+	pathComponents := mySplit(path, '/', buf)
 
 	if !r.Relative {
 		// stinky recursive step
@@ -184,14 +193,17 @@ func (r *Rule) MatchesPath(path string) bool {
 }
 
 // Stores a list of rules for matching paths against .gitignore patterns
+// PathComponentsBuf is a temporary buffer for mySplit calls, this avoids excessive allocation
 type GitIgnore struct {
-	Rules []Rule
+	Rules             []Rule
+	pathComponentsBuf []string
 }
 
 // Creates a Gitignore from a list of patterns (lines in a .gitignore file)
 func CompileIgnoreLines(patterns []string) *GitIgnore {
 	gitignore := &GitIgnore{
-		Rules: make([]Rule, 0, len(patterns)),
+		Rules:             make([]Rule, 0, len(patterns)),
+		pathComponentsBuf: make([]string, 2048),
 	}
 
 	for _, pattern := range patterns {
@@ -244,7 +256,9 @@ func createRule(pattern string) Rule {
 	}
 
 	// split the pattern into components
-	components := mySplit(pattern, '/')
+	// we use the default split function because this only runs once for each rule
+	// this saves memory compared to using mySplit
+	components := strings.Split(pattern, "/")
 
 	return Rule{
 		Components:    components,
@@ -258,8 +272,9 @@ func createRule(pattern string) Rule {
 func (g *GitIgnore) MatchesPath(path string) bool {
 	path = filepath.ToSlash(path)
 	matched := false
+
 	for _, rule := range g.Rules {
-		if rule.MatchesPath(path) {
+		if rule.matchesPath(path, g.pathComponentsBuf) {
 			if !rule.Negate {
 				matched = true
 			} else {
