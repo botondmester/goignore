@@ -15,6 +15,7 @@ go get github.com/botondmester/goignore
 This is a simple example showing how to use the library:
 ```go
 import (
+    "fmt"
     "os"
     "strings"
 
@@ -22,12 +23,17 @@ import (
 )
 
 func main() {
-    ignore := goignore.CompileIgnoreLines([]string{
+    ignore, err := goignore.CompileIgnoreLines([]string{
 		"/*",
 		"!/foo",
 		"/foo/*",
 		"!/foo/bar",
 	})
+
+    if err != nil {
+		fmt.Println("Error reading gitignore:", err)
+		return
+	}
 
     // should print `foo/baz is ignored`
     if ignore.Match("foo/baz") {

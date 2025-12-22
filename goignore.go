@@ -1,6 +1,7 @@
 package goignore
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,15 +41,17 @@ type Rule struct {
 }
 
 func stringMatch(str string, pattern string) bool {
+	// i is the index in str, j is the index in pattern
 	i, j := 0, 0
 	for ; i < len(str); i++ {
 		if j >= len(pattern) {
+			// we ran out of pattern but still have str to match
 			return false
 		}
 
 		switch pattern[j] {
 		case '?':
-			// just skip the character in str
+			// skip the '?' character on the pattern
 			j++
 		case '*':
 			// stinky recursive step
@@ -60,9 +63,47 @@ func stringMatch(str string, pattern string) bool {
 				}
 			}
 			return found
-		// TODO: handle character classes like [a-z] and [^a-z], and add tests for them
-		// case '[':
+		case '[':
+			j++ // skip the '[' character
+			negate := false
+			matched := false
+			// handle special cases
+			switch pattern[j] {
+			case '!':
+				negate = true
+				j++
+			case ']':
+				if str[i] == ']' {
+					matched = true
+				}
+				j++
+			}
+
+			// TODO: handle backslashes correctly
+			for ; pattern[j] != ']'; j++ {
+				if matched {
+					continue
+				}
+				if pattern[j+1] == '-' && pattern[j+2] != ']' {
+					// handle ranges
+					if pattern[j] <= str[i] && str[i] <= pattern[j+2] {
+						matched = true
+					}
+				}
+				if str[i] == pattern[j] {
+					matched = true
+				}
+			}
+			j++
+
+			if matched == negate {
+				return false
+			}
 		default:
+			// escaping
+			if pattern[j] == '\\' {
+				j++
+			}
 			if str[i] != pattern[j] {
 				return false
 			}
@@ -133,35 +174,43 @@ type GitIgnore struct {
 }
 
 // Creates a Gitignore from a list of patterns (lines in a .gitignore file)
-func CompileIgnoreLines(patterns []string) *GitIgnore {
+func CompileIgnoreLines(patterns []string) (*GitIgnore, error) {
 	gitignore := &GitIgnore{
 		Rules: make([]Rule, 0, len(patterns)),
 	}
 
-	for _, pattern := range patterns {
+	for i, pattern := range patterns {
 		// skip empty lines, comments, and trailing/leading whitespace
 		pattern = strings.Trim(pattern, " \t\r\n")
 		if pattern == "" || pattern[0] == '#' {
 			continue
 		}
 
-		rule := createRule(pattern)
+		rule, err := createRule(pattern)
+
+		if err {
+			return nil, fmt.Errorf("Error in rule #%d", i+1)
+		}
 
 		gitignore.Rules = append(gitignore.Rules, rule)
 	}
 
-	return gitignore
+	return gitignore, nil
 }
 
 // Same as CompileIgnoreLines, but reads from a file
 func CompileIgnoreFile(filename string) (*GitIgnore, error) {
 	lines, err := os.ReadFile(filename)
 
-	return CompileIgnoreLines(strings.Split(string(lines), "\n")), err
+	if err == nil {
+		return CompileIgnoreLines(strings.Split(string(lines), "\n"))
+	} else {
+		return nil, err
+	}
 }
 
 // create a rule from a pattern
-func createRule(pattern string) Rule {
+func createRule(pattern string) (Rule, bool) {
 	negate := false
 	onlyDirectory := false
 	relative := false
@@ -187,12 +236,28 @@ func createRule(pattern string) Rule {
 	// split the pattern into components
 	components := mySplit(pattern, '/')
 
+	// check if all character classes are closed
+	for _, component := range components {
+		isOpen := false
+		for i := 0; i < len(component); i++ {
+			switch component[i] {
+			case '[':
+				isOpen = true
+			case ']':
+				isOpen = false
+			}
+		}
+		if isOpen {
+			return Rule{}, true
+		}
+	}
+
 	return Rule{
 		Components:    components,
 		Negate:        negate,
 		OnlyDirectory: onlyDirectory,
 		Relative:      relative || len(components) > 1,
-	}
+	}, false
 }
 
 // Tries to match the path to all the rules in the gitignore
