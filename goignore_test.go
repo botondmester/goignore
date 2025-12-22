@@ -42,9 +42,9 @@ func ExampleCompileIgnoreLines() {
 	// "Match()" interface method. This pretty much is up to
 	// the users interpretation. In the case of a ".gitignore" file,
 	// a "match" would indicate that a given path would be ignored.
-	fmt.Println(ignoreObject.Match("node_modules/test/foo.js"))
-	fmt.Println(ignoreObject.Match("node_modules2/test.out"))
-	fmt.Println(ignoreObject.Match("test/foo.js"))
+	fmt.Println(ignoreObject.MatchesPath("node_modules/test/foo.js"))
+	fmt.Println(ignoreObject.MatchesPath("node_modules2/test.out"))
+	fmt.Println(ignoreObject.MatchesPath("test/foo.js"))
 
 	// Output:
 	// true
@@ -64,9 +64,9 @@ func ExampleCompileIgnoreFile() {
 	// You can test the ignoreObject against various paths using the
 	// "Match()" interface method.
 	// int this example, we test paths against the .gitignore file of this package.
-	fmt.Println(ignoreObject.Match("bin/goignore.so"))
-	fmt.Println(ignoreObject.Match("goignore.test"))
-	fmt.Println(ignoreObject.Match("go.mod"))
+	fmt.Println(ignoreObject.MatchesPath("bin/goignore.so"))
+	fmt.Println(ignoreObject.MatchesPath("goignore.test"))
+	fmt.Println(ignoreObject.MatchesPath("go.mod"))
 
 	// Output:
 	// true
@@ -83,10 +83,10 @@ func TestCompileIgnoreLines_HandleIncludePattern(t *testing.T) {
 		"!/foo/bar",
 	})
 
-	assert.Equal(t, true, object.Match("a"), "a should match")
-	assert.Equal(t, true, object.Match("foo/baz"), "foo/baz should match")
-	assert.Equal(t, false, object.Match("foo"), "foo should not match")
-	assert.Equal(t, false, object.Match("/foo/bar"), "/foo/bar should not match")
+	assert.Equal(t, true, object.MatchesPath("a"), "a should match")
+	assert.Equal(t, true, object.MatchesPath("foo/baz"), "foo/baz should match")
+	assert.Equal(t, false, object.MatchesPath("foo"), "foo should not match")
+	assert.Equal(t, false, object.MatchesPath("/foo/bar"), "/foo/bar should not match")
 }
 
 // Validate the correct handling of leading / chars
@@ -97,10 +97,10 @@ func TestCompileIgnoreLines_HandleLeadingSlash(t *testing.T) {
 		"/g",
 	})
 
-	assert.Equal(t, true, object.Match("a/b/c"), "a/b/c should match")
-	assert.Equal(t, true, object.Match("a/b/c/d"), "a/b/c/d should match")
-	assert.Equal(t, true, object.Match("d/e/f"), "d/e/f should match")
-	assert.Equal(t, true, object.Match("g"), "g should match")
+	assert.Equal(t, true, object.MatchesPath("a/b/c"), "a/b/c should match")
+	assert.Equal(t, true, object.MatchesPath("a/b/c/d"), "a/b/c/d should match")
+	assert.Equal(t, true, object.MatchesPath("d/e/f"), "d/e/f should match")
+	assert.Equal(t, true, object.MatchesPath("g"), "g should match")
 }
 
 // Validate the correct handling of files starting with # or !
@@ -112,12 +112,12 @@ func TestCompileIgnoreLines_HandleLeadingSpecialChars(t *testing.T) {
 		"file.txt",
 	})
 
-	assert.Equal(t, true, object.Match("#file.txt"), "#file.txt should match")
-	assert.Equal(t, true, object.Match("!file.txt"), "!file.txt should match")
-	assert.Equal(t, true, object.Match("a/!file.txt"), "a/!file.txt should match")
-	assert.Equal(t, true, object.Match("file.txt"), "file.txt should match")
-	assert.Equal(t, true, object.Match("a/file.txt"), "a/file.txt should match")
-	assert.Equal(t, false, object.Match("file2.txt"), "file2.txt should not match")
+	assert.Equal(t, true, object.MatchesPath("#file.txt"), "#file.txt should match")
+	assert.Equal(t, true, object.MatchesPath("!file.txt"), "!file.txt should match")
+	assert.Equal(t, true, object.MatchesPath("a/!file.txt"), "a/!file.txt should match")
+	assert.Equal(t, true, object.MatchesPath("file.txt"), "file.txt should match")
+	assert.Equal(t, true, object.MatchesPath("a/file.txt"), "a/file.txt should match")
+	assert.Equal(t, false, object.MatchesPath("file2.txt"), "file2.txt should not match")
 
 }
 
@@ -125,27 +125,27 @@ func TestCompileIgnoreLines_HandleLeadingSpecialChars(t *testing.T) {
 func TestCompileIgnoreLines_HandleAllFilesInDir(t *testing.T) {
 	object := CompileIgnoreLines([]string{"Documentation/*.html"})
 
-	assert.Equal(t, true, object.Match("Documentation/git.html"), "Documentation/git.html should match")
-	assert.Equal(t, false, object.Match("Documentation/ppc/ppc.html"), "Documentation/ppc/ppc.html should not match")
-	assert.Equal(t, false, object.Match("tools/perf/Documentation/perf.html"), "tools/perf/Documentation/perf.html should not match")
+	assert.Equal(t, true, object.MatchesPath("Documentation/git.html"), "Documentation/git.html should match")
+	assert.Equal(t, false, object.MatchesPath("Documentation/ppc/ppc.html"), "Documentation/ppc/ppc.html should not match")
+	assert.Equal(t, false, object.MatchesPath("tools/perf/Documentation/perf.html"), "tools/perf/Documentation/perf.html should not match")
 }
 
 // Validate the correct handling of "**"
 func TestCompileIgnoreLines_HandleDoubleStar(t *testing.T) {
 	object := CompileIgnoreLines([]string{"**/foo", "bar"})
 
-	assert.Equal(t, true, object.Match("foo"), "foo should match")
-	assert.Equal(t, true, object.Match("baz/foo"), "baz/foo should match")
-	assert.Equal(t, true, object.Match("bar"), "bar should match")
-	assert.Equal(t, true, object.Match("baz/bar"), "baz/bar should match")
+	assert.Equal(t, true, object.MatchesPath("foo"), "foo should match")
+	assert.Equal(t, true, object.MatchesPath("baz/foo"), "baz/foo should match")
+	assert.Equal(t, true, object.MatchesPath("bar"), "bar should match")
+	assert.Equal(t, true, object.MatchesPath("baz/bar"), "baz/bar should match")
 }
 
 // Validate the correct handling of leading slash
 func TestCompileIgnoreLines_HandleLeadingSlashPath(t *testing.T) {
 	object := CompileIgnoreLines([]string{"/*.c"})
 
-	assert.Equal(t, true, object.Match("hello.c"), "hello.c should match")
-	assert.Equal(t, false, object.Match("foo/hello.c"), "foo/hello.c should not match")
+	assert.Equal(t, true, object.MatchesPath("hello.c"), "hello.c should match")
+	assert.Equal(t, false, object.MatchesPath("foo/hello.c"), "foo/hello.c should not match")
 }
 
 func TestCompileIgnoreLines_CheckNestedDotFiles(t *testing.T) {
@@ -162,21 +162,21 @@ func TestCompileIgnoreLines_CheckNestedDotFiles(t *testing.T) {
 	object := CompileIgnoreLines(lines)
 	assert.NotNil(t, object, "returned object should not be nil")
 
-	assert.Equal(t, true, object.Match("external/foobar/angular.foo.css"), "external/foobar/angular.foo.css")
-	assert.Equal(t, true, object.Match("external/barfoo/.gitignore"), "external/barfoo/.gitignore")
-	assert.Equal(t, true, object.Match("external/barfoo/.bower.json"), "external/barfoo/.bower.json")
+	assert.Equal(t, true, object.MatchesPath("external/foobar/angular.foo.css"), "external/foobar/angular.foo.css")
+	assert.Equal(t, true, object.MatchesPath("external/barfoo/.gitignore"), "external/barfoo/.gitignore")
+	assert.Equal(t, true, object.MatchesPath("external/barfoo/.bower.json"), "external/barfoo/.bower.json")
 }
 
 func TestCompileIgnoreLines_CarriageReturn(t *testing.T) {
 	lines := []string{"abc/def\r", "a/b/c\r", "b\r"}
 	object := CompileIgnoreLines(lines)
 
-	assert.Equal(t, true, object.Match("abc/def/child"), "abc/def/child should match")
-	assert.Equal(t, true, object.Match("a/b/c/d"), "a/b/c/d should match")
+	assert.Equal(t, true, object.MatchesPath("abc/def/child"), "abc/def/child should match")
+	assert.Equal(t, true, object.MatchesPath("a/b/c/d"), "a/b/c/d should match")
 
-	assert.Equal(t, false, object.Match("abc"), "abc should not match")
-	assert.Equal(t, false, object.Match("def"), "def should not match")
-	assert.Equal(t, false, object.Match("bd"), "bd should not match")
+	assert.Equal(t, false, object.MatchesPath("abc"), "abc should not match")
+	assert.Equal(t, false, object.MatchesPath("def"), "def should not match")
+	assert.Equal(t, false, object.MatchesPath("bd"), "bd should not match")
 }
 
 func TestCompileIgnoreLines_WindowsPath(t *testing.T) {
@@ -186,8 +186,8 @@ func TestCompileIgnoreLines_WindowsPath(t *testing.T) {
 	lines := []string{"abc/def", "a/b/c", "b"}
 	object := CompileIgnoreLines(lines)
 
-	assert.Equal(t, true, object.Match("abc\\def\\child"), "abc\\def\\child should match")
-	assert.Equal(t, true, object.Match("a\\b\\c\\d"), "a\\b\\c\\d should match")
+	assert.Equal(t, true, object.MatchesPath("abc\\def\\child"), "abc\\def\\child should match")
+	assert.Equal(t, true, object.MatchesPath("a\\b\\c\\d"), "a\\b\\c\\d should match")
 }
 
 func TestWildCardFiles(t *testing.T) {
@@ -195,42 +195,42 @@ func TestWildCardFiles(t *testing.T) {
 	object := CompileIgnoreLines(gitIgnore)
 
 	// Paths which are targeted by the above "lines"
-	assert.Equal(t, true, object.Match("yo.swp"), "should ignore all swp files")
-	assert.Equal(t, true, object.Match("something/else/but/it/hasyo.swp"), "should ignore all swp files in other directories")
+	assert.Equal(t, true, object.MatchesPath("yo.swp"), "should ignore all swp files")
+	assert.Equal(t, true, object.MatchesPath("something/else/but/it/hasyo.swp"), "should ignore all swp files in other directories")
 
-	assert.Equal(t, true, object.Match("foo/bar.wat"), "should ignore all wat files in foo - nonpreceding /")
-	assert.Equal(t, true, object.Match("/foo/something.wat"), "should ignore all wat files in foo - preceding /")
+	assert.Equal(t, true, object.MatchesPath("foo/bar.wat"), "should ignore all wat files in foo - nonpreceding /")
+	assert.Equal(t, true, object.MatchesPath("/foo/something.wat"), "should ignore all wat files in foo - preceding /")
 
-	assert.Equal(t, true, object.Match("bar/something.txt"), "should ignore all txt files in bar - nonpreceding /")
-	assert.Equal(t, true, object.Match("/bar/somethingelse.txt"), "should ignore all txt files in bar - preceding /")
+	assert.Equal(t, true, object.MatchesPath("bar/something.txt"), "should ignore all txt files in bar - nonpreceding /")
+	assert.Equal(t, true, object.MatchesPath("/bar/somethingelse.txt"), "should ignore all txt files in bar - preceding /")
 
 	// Paths which are not targeted by the above "lines"
-	assert.Equal(t, false, object.Match("something/not/infoo/wat.wat"), "wat files should only be ignored in foo")
-	assert.Equal(t, false, object.Match("something/not/infoo/wat.txt"), "txt files should only be ignored in bar")
+	assert.Equal(t, false, object.MatchesPath("something/not/infoo/wat.wat"), "wat files should only be ignored in foo")
+	assert.Equal(t, false, object.MatchesPath("something/not/infoo/wat.txt"), "txt files should only be ignored in bar")
 }
 
 func TestPrecedingSlash(t *testing.T) {
 	gitIgnore := []string{"/foo", "bar/"}
 	object := CompileIgnoreLines(gitIgnore)
 
-	assert.Equal(t, true, object.Match("foo/bar.wat"), "should ignore all files in foo - nonpreceding /")
-	assert.Equal(t, true, object.Match("/foo/something.txt"), "should ignore all files in foo - preceding /")
+	assert.Equal(t, true, object.MatchesPath("foo/bar.wat"), "should ignore all files in foo - nonpreceding /")
+	assert.Equal(t, true, object.MatchesPath("/foo/something.txt"), "should ignore all files in foo - preceding /")
 
-	assert.Equal(t, true, object.Match("bar/something.txt"), "should ignore all files in bar - nonpreceding /")
-	assert.Equal(t, true, object.Match("/bar/somethingelse.go"), "should ignore all files in bar - preceding /")
-	assert.Equal(t, true, object.Match("/boo/something/bar/boo.txt"), "should block all files if bar is a sub directory")
+	assert.Equal(t, true, object.MatchesPath("bar/something.txt"), "should ignore all files in bar - nonpreceding /")
+	assert.Equal(t, true, object.MatchesPath("/bar/somethingelse.go"), "should ignore all files in bar - preceding /")
+	assert.Equal(t, true, object.MatchesPath("/boo/something/bar/boo.txt"), "should block all files if bar is a sub directory")
 
-	assert.Equal(t, false, object.Match("something/foo/something.txt"), "should only ignore top level foo directories- not nested")
+	assert.Equal(t, false, object.MatchesPath("something/foo/something.txt"), "should only ignore top level foo directories- not nested")
 }
 
 func TestDirOnlyMatching(t *testing.T) {
 	gitIgnore := []string{"foo/", "bar/"}
 	object := CompileIgnoreLines(gitIgnore)
 
-	assert.Equal(t, true, object.Match("foo/"), "should match foo directory")
-	assert.Equal(t, true, object.Match("bar/"), "should match bar directory")
-	assert.Equal(t, false, object.Match("foo"), "should not match foo file")
-	assert.Equal(t, false, object.Match("bar"), "should not match bar file")
-	assert.Equal(t, true, object.Match("foo/bar"), "should match nested files in foo")
-	assert.Equal(t, true, object.Match("bar/foo"), "should match nested files in bar")
+	assert.Equal(t, true, object.MatchesPath("foo/"), "should match foo directory")
+	assert.Equal(t, true, object.MatchesPath("bar/"), "should match bar directory")
+	assert.Equal(t, false, object.MatchesPath("foo"), "should not match foo file")
+	assert.Equal(t, false, object.MatchesPath("bar"), "should not match bar file")
+	assert.Equal(t, true, object.MatchesPath("foo/bar"), "should match nested files in foo")
+	assert.Equal(t, true, object.MatchesPath("bar/foo"), "should match nested files in bar")
 }
