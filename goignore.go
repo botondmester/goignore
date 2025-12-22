@@ -200,9 +200,8 @@ func matchComponents(path []string, components []string) (matches bool, final bo
 
 // Tries to match the path against the rule
 // the function expects a buffer of sufficient size to get passed to it, this avoids excessive memory allocation
-func (r *Rule) matchesPath(path string, buf []string) bool {
+func (r *Rule) matchesPath(path string, pathComponents []string) bool {
 	hasSuffix := strings.HasSuffix(path, "/")
-	pathComponents := mySplitBuf(path, '/', buf)
 
 	if !r.Relative {
 		// stinky recursive step
@@ -300,10 +299,11 @@ func createRule(pattern string) Rule {
 // Tries to match the path to all the rules in the gitignore
 func (g *GitIgnore) MatchesPath(path string) bool {
 	path = filepath.ToSlash(path)
+	pathComponents := mySplitBuf(path, '/', g.pathComponentsBuf)
 	matched := false
 
 	for _, rule := range g.Rules {
-		if rule.matchesPath(path, g.pathComponentsBuf) {
+		if rule.matchesPath(path, pathComponents) {
 			if !rule.Negate {
 				matched = true
 			} else {
