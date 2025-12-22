@@ -108,11 +108,11 @@ func stringMatch(str string, pattern string) bool {
 			negate := false
 			matched := false
 			// handle special cases
-			switch pattern[j] {
-			case '!':
+			if pattern[j] == '!' {
 				negate = true
 				j++
-			case ']':
+			}
+			if pattern[j] == ']' {
 				if str[i] == ']' {
 					matched = true
 				}
@@ -124,7 +124,7 @@ func stringMatch(str string, pattern string) bool {
 				if matched {
 					continue
 				}
-				if pattern[j+1] == '-' && pattern[j+2] != ']' {
+				if j+2 < len(pattern) && pattern[j+1] == '-' && pattern[j+2] != ']' {
 					// handle ranges
 					if pattern[j] <= str[i] && str[i] <= pattern[j+2] {
 						matched = true

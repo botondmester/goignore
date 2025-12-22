@@ -282,6 +282,16 @@ func TestCharacterClasses(t *testing.T) {
 	assert.Equal(t, false, ignoreObject.MatchesPath("!-files"), "should not match !-files")
 	assert.Equal(t, false, ignoreObject.MatchesPath("*-files"), "should not match *-files")
 	assert.Equal(t, true, ignoreObject.MatchesPath("8-files"), "should match 8-files")
+
+	gitIgnore = []string{"[]-]"}
+	ignoreObject = CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+
+	assert.Equal(t, true, ignoreObject.MatchesPath("]"), "should match ]")
+	assert.Equal(t, true, ignoreObject.MatchesPath("-"), "should match -")
+	assert.Equal(t, false, ignoreObject.MatchesPath("[]-]"), "should not match []-]")
+	assert.Equal(t, false, ignoreObject.MatchesPath("[]-]"), "should not match -]")
 }
 
 func TestUnclosedCharacterClass(t *testing.T) {
@@ -290,8 +300,15 @@ func TestUnclosedCharacterClass(t *testing.T) {
 
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
 	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
+	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
 
 	gitIgnore = []string{"[a-z][[]A-Z*-files"}
+	ignoreObject = CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
+
+	gitIgnore = []string{"[a-z][A-Z*files\n"}
 	ignoreObject = CompileIgnoreLines(gitIgnore)
 
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
