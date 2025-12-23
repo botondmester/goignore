@@ -76,6 +76,37 @@ type Rule struct {
 	Relative      bool
 }
 
+func selectorMatch(c byte, selector string) bool {
+	switch selector {
+	case "alnum":
+		return ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+	case "alpha":
+		return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+	case "blank":
+		return c == ' ' || c == '\t'
+	case "cntrl":
+		return c < 32 || c == 127
+	case "digit":
+		return '0' <= c && c <= '9'
+	case "graph":
+		return 33 <= c && c <= 126
+	case "lower":
+		return 'a' <= c && c <= 'z'
+	case "print":
+		return 32 <= c && c <= 126
+	case "punct":
+		return (33 <= c && c <= 47) || (58 <= c && c <= 64) || (91 <= c && c <= 96) || (123 <= c && c <= 126)
+	case "space":
+		return (9 <= c && c <= 13) || c == 32
+	case "upper":
+		return 'A' <= c && c <= 'Z'
+	case "xdigit":
+		return ('0' <= c && c <= '9') || ('A' <= c && c <= 'F') || ('a' <= c && c <= 'f')
+	default:
+		return false
+	}
+}
+
 func stringMatch(str string, pattern string) bool {
 	// i is the index in str, j is the index in pattern
 	i, j := 0, 0
@@ -89,7 +120,7 @@ func stringMatch(str string, pattern string) bool {
 		}
 		negate := false
 		matched := false
-		if pattern[j] == '!' {
+		if pattern[j] == '!' || pattern[j] == '^' {
 			negate = true
 			j++
 			if j >= len(pattern) {
@@ -106,6 +137,25 @@ func stringMatch(str string, pattern string) bool {
 		}
 
 		for j < len(pattern) && pattern[j] != ']' {
+			// handle special [:class:] character classes
+			if j+2 < len(pattern) && pattern[j] == '[' && pattern[j+1] == ':' {
+				j += 2
+				s := j
+				for s < len(pattern) && pattern[s] != ']' {
+					s++
+				}
+				// unclosed character class
+				if s == len(pattern) {
+					return false, j, false
+				}
+
+				selector := pattern[j : s-1]
+				if selectorMatch(ch, selector) {
+					matched = true
+				}
+				j = s + 1
+				continue
+			}
 			// handle ranges
 			if j+2 < len(pattern) && pattern[j+1] == '-' && pattern[j+2] != ']' {
 				a := pattern[j]

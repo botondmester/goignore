@@ -293,6 +293,15 @@ func TestCharacterClasses(t *testing.T) {
 	assert.Equal(t, true, ignoreObject.MatchesPath("-"), "should match -")
 	assert.Equal(t, false, ignoreObject.MatchesPath("[]-]"), "should not match []-]")
 	assert.Equal(t, false, ignoreObject.MatchesPath("[]-]"), "should not match -]")
+
+	gitIgnore = []string{"[[:digit:]].txt", "[:alpha:].txt"}
+	ignoreObject = CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+
+	assert.Equal(t, true, ignoreObject.MatchesPath("6.txt"), "should match 6.txt")
+	assert.Equal(t, false, ignoreObject.MatchesPath("z.txt"), "should not match z.txt")
+	assert.Equal(t, true, ignoreObject.MatchesPath("a.txt"), "should match a.txt")
 }
 
 func TestUnclosedCharacterClass(t *testing.T) {
