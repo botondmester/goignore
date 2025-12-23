@@ -79,85 +79,120 @@ type Rule struct {
 func stringMatch(str string, pattern string) bool {
 	// i is the index in str, j is the index in pattern
 	i, j := 0, 0
-	for ; i < len(str); i++ {
+	lastStarIdx := -1
+	lastStrIdx := -1
+
+	matchCharClass := func(j int, ch byte) (match bool, newJ int, ok bool) {
+		j++ // skip '['
 		if j >= len(pattern) {
-			// we ran out of pattern but still have str to match
-			return false
+			return false, j, false
+		}
+		negate := false
+		matched := false
+		if pattern[j] == '!' {
+			negate = true
+			j++
+			if j >= len(pattern) {
+				return false, j, false
+			}
 		}
 
-		switch pattern[j] {
-		case '?':
-			// skip the '?' character on the pattern
+		// special-case leading ']'
+		if pattern[j] == ']' {
+			if ch == ']' {
+				matched = true
+			}
 			j++
-		case '*':
-			// stinky recursive step
-			found := false
-			for k := len(str); k >= i; k-- {
-				if stringMatch(str[k:], pattern[j+1:]) {
-					found = true
-					break
-				}
-			}
-			return found
-		case '[':
-			j++ // skip the '[' character
+		}
 
-			negate := false
-			matched := false
-			// handle special cases
-			if pattern[j] == '!' {
-				negate = true
-				j++
-			}
-			if pattern[j] == ']' {
-				if str[i] == ']' {
+		for j < len(pattern) && pattern[j] != ']' {
+			// handle ranges
+			if j+2 < len(pattern) && pattern[j+1] == '-' && pattern[j+2] != ']' {
+				a := pattern[j]
+				b := pattern[j+2]
+				if a <= ch && ch <= b {
 					matched = true
 				}
-				j++
+				j += 3
+				continue
 			}
+			if pattern[j] == ch {
+				matched = true
+			}
+			j++
+		}
 
-			// TODO: handle backslashes correctly
-			for ; j < len(pattern) && pattern[j] != ']'; j++ {
-				if matched {
+		if j >= len(pattern) || pattern[j] != ']' {
+			// unclosed character class
+			return false, j, false
+		}
+
+		j++ // skip closing ']'
+		if negate {
+			return !matched, j, true
+		}
+		return matched, j, true
+	}
+
+	for i < len(str) {
+		if j < len(pattern) {
+			pChar := pattern[j]
+			if pChar == '?' {
+				i++
+				j++
+				continue
+			}
+			if pChar == '*' {
+				// record star position and advance pattern
+				lastStarIdx = j
+				lastStrIdx = i
+				j++
+				continue
+			}
+			if pChar == '[' {
+				okMatch, newJ, ok := matchCharClass(j, str[i])
+				if !ok {
+					// unclosed class -> no match
+					return false
+				}
+				if okMatch {
+					i++
+					j = newJ
 					continue
 				}
-				if j+2 < len(pattern) && pattern[j+1] == '-' && pattern[j+2] != ']' {
-					// handle ranges
-					if pattern[j] <= str[i] && str[i] <= pattern[j+2] {
-						matched = true
-					}
+				// class did not match, go to star-backtrack logic
+			} else {
+				// handle escaping
+				if pChar == '\\' && j+1 < len(pattern) {
+					j++
+					pChar = pattern[j]
 				}
-				if str[i] == pattern[j] {
-					matched = true
+				if str[i] == pChar {
+					i++
+					j++
+					continue
 				}
 			}
-
-			// unclosed character class, return no match
-			if j == len(pattern) {
-				return false
-			}
-
-			j++
-
-			if matched == negate {
-				return false
-			}
-		default:
-			// escaping
-			if pattern[j] == '\\' {
-				j++
-			}
-			if str[i] != pattern[j] {
-				return false
-			}
-			j++
 		}
-	}
-	if j < len(pattern) {
-		// we ran out of str, but still have pattern to match
+
+		if lastStarIdx != -1 {
+			j = lastStarIdx + 1
+			lastStrIdx++
+			i = lastStrIdx
+			continue
+		}
+
+		// we can't backtrack, so no match
 		return false
 	}
-	return true
+
+	// consume remaining stars in pattern
+	for j < len(pattern) && pattern[j] == '*' {
+		j++
+	}
+
+	// if we ran out of pattern, return true
+	return j >= len(pattern)
 }
 
 // Tries to match the path components against the rule components
