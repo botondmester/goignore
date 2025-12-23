@@ -137,6 +137,11 @@ func stringMatch(str string, pattern string) bool {
 		}
 
 		for j < len(pattern) && pattern[j] != ']' {
+			// handle escaping
+			if pattern[j] == '\\' && j+1 < len(pattern) {
+				j += 2
+				continue
+			}
 			// handle special [:class:] character classes
 			if j+2 < len(pattern) && pattern[j] == '[' && pattern[j+1] == ':' {
 				j += 2
@@ -348,10 +353,6 @@ func createRule(pattern string) Rule {
 	if pattern[0] == '/' {
 		relative = true
 		pattern = pattern[1:] // skip the '/'
-	}
-
-	if pattern[0] == '\\' {
-		pattern = pattern[1:] // skip the '\'
 	}
 
 	// check if the pattern ends with a '/', which means it only matches directories

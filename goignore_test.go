@@ -336,3 +336,14 @@ func TestStarStarExponentialBehaviour(t *testing.T) {
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
 	assert.Equal(t, true, ignoreObject.MatchesPath("a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/b"), "should match")
 }
+
+func TestEscaping(t *testing.T) {
+	gitIgnore := []string{"\\[hello", "bye[\\]"}
+	ignoreObject := CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+	assert.Equal(t, true, ignoreObject.MatchesPath("[hello"), "should match [hello")
+	assert.Equal(t, false, ignoreObject.MatchesPath("bye[]"), "should not match bye[]")
+	assert.Equal(t, false, ignoreObject.MatchesPath("bye["), "should not match bye[")
+	assert.Equal(t, false, ignoreObject.MatchesPath("bye[\\]"), "should not match bye[\\]")
+}
