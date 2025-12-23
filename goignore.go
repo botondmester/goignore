@@ -146,11 +146,12 @@ func stringMatch(str string, pattern string) bool {
 			if j+2 < len(pattern) && pattern[j] == '[' && pattern[j+1] == ':' {
 				j += 2
 				s := j
-				for s < len(pattern) && pattern[s] != ']' {
+				for s < len(pattern) && (pattern[s] != ']' || pattern[s-1] != ':') {
 					s++
 				}
+
 				// unclosed character class
-				if s == len(pattern) {
+				if s >= len(pattern) || s < j+2 {
 					return false, j, false
 				}
 
@@ -318,7 +319,7 @@ func CompileIgnoreLines(patterns []string) *GitIgnore {
 	for _, pattern := range patterns {
 		// skip empty lines, comments, and trailing/leading whitespace
 		pattern = strings.Trim(pattern, " \t\r\n")
-		if pattern == "" || pattern[0] == '#' {
+		if pattern == "" || pattern == "!" || pattern[0] == '#' {
 			continue
 		}
 
@@ -356,7 +357,7 @@ func createRule(pattern string) Rule {
 	}
 
 	// check if the pattern ends with a '/', which means it only matches directories
-	if pattern[len(pattern)-1] == '/' {
+	if len(pattern) > 0 && pattern[len(pattern)-1] == '/' {
 		onlyDirectory = true
 	}
 
