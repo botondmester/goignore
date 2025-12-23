@@ -311,3 +311,19 @@ func TestUnclosedCharacterClass(t *testing.T) {
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
 	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
 }
+
+func TestStarExponentialBehaviour(t *testing.T) {
+	gitIgnore := []string{"*a*a*a*a*a*a*a*a*a*a*a*a"}
+	ignoreObject := CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+	assert.Equal(t, false, ignoreObject.MatchesPath("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"), "should not match")
+}
+
+func TestStarStarExponentialBehaviour(t *testing.T) {
+	gitIgnore := []string{"**/a/**/a/**/a/**/a/**/a/**/a/**/a/**/a/**/a/**/a"}
+	ignoreObject := CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+	assert.Equal(t, true, ignoreObject.MatchesPath("a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/a/b"), "should match")
+}

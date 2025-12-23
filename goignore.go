@@ -153,7 +153,7 @@ func stringMatch(str string, pattern string) bool {
 			j++
 		}
 	}
-	if j < len(pattern)-1 {
+	if j < len(pattern) {
 		// we ran out of str, but still have pattern to match
 		return false
 	}
