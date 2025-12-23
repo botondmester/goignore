@@ -3,6 +3,7 @@ package goignore
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -346,4 +347,25 @@ func TestEscaping(t *testing.T) {
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye[]"), "should not match bye[]")
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye["), "should not match bye[")
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye[\\]"), "should not match bye[\\]")
+}
+
+func FuzzStringMatch(f *testing.F) {
+	f.Add("hello, world!", "hell*[oasd], [[:alpha:]]orld!")
+	f.Add("hello, world!", "hell*[!asd], [![:digit:]]orld!")
+	f.Fuzz(func(t *testing.T, str string, pattern string) {
+		stringMatch(str, pattern)
+	})
+}
+
+func FuzzWhole(f *testing.F) {
+	f.Add("hell*[oasd], [[:alpha:]]orld!", "hello, world!")
+	f.Add("hell*[!asd], [![:digit:]]orld!", "hello, world!")
+	f.Fuzz(func(t *testing.T, ignore string, path string) {
+		ignoreObject := CompileIgnoreLines(strings.Split(ignore, "/n"))
+
+		if ignoreObject == nil {
+			t.Fail()
+		}
+		ignoreObject.MatchesPath(path)
+	})
 }
