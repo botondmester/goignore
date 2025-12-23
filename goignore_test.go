@@ -140,14 +140,15 @@ func TestCompileIgnoreLines_HandleAllFilesInDir(t *testing.T) {
 
 // Validate the correct handling of "**"
 func TestCompileIgnoreLines_HandleDoubleStar(t *testing.T) {
-	ignoreObject := CompileIgnoreLines([]string{"**/foo", "bar"})
+	ignoreObject := CompileIgnoreLines([]string{"**/foo", "bar", "baz/**"})
 
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
 
 	assert.Equal(t, true, ignoreObject.MatchesPath("foo"), "foo should match")
 	assert.Equal(t, true, ignoreObject.MatchesPath("baz/foo"), "baz/foo should match")
 	assert.Equal(t, true, ignoreObject.MatchesPath("bar"), "bar should match")
-	assert.Equal(t, true, ignoreObject.MatchesPath("baz/bar"), "baz/bar should match")
+	assert.Equal(t, true, ignoreObject.MatchesPath("fizz/bar"), "fizz/bar should match")
+	assert.Equal(t, true, ignoreObject.MatchesPath("baz/buzz"), "baz/buzz should match")
 }
 
 // Validate the correct handling of leading slash
@@ -295,20 +296,16 @@ func TestCharacterClasses(t *testing.T) {
 }
 
 func TestUnclosedCharacterClass(t *testing.T) {
-	gitIgnore := []string{"[a-z][A-Z*-files"}
+	gitIgnore := []string{"*[*"}
 	ignoreObject := CompileIgnoreLines(gitIgnore)
 
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
-	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
-	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
+	assert.Equal(t, false, ignoreObject.MatchesPath("["), "should not match [")
+	assert.Equal(t, false, ignoreObject.MatchesPath("*["), "should not match *[")
+	assert.Equal(t, false, ignoreObject.MatchesPath("[*"), "should not match [*")
+	assert.Equal(t, false, ignoreObject.MatchesPath("*[*"), "should not match *[*")
 
 	gitIgnore = []string{"[a-z][[]A-Z*-files"}
-	ignoreObject = CompileIgnoreLines(gitIgnore)
-
-	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
-	assert.Equal(t, true, ignoreObject.MatchesPath("a[A-Z-files"), "should match a[A-Z-files")
-
-	gitIgnore = []string{"[a-z][A-Z*files\n"}
 	ignoreObject = CompileIgnoreLines(gitIgnore)
 
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")

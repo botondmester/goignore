@@ -100,9 +100,6 @@ func stringMatch(str string, pattern string) bool {
 			}
 			return found
 		case '[':
-			prevI := i
-			prevJ := j
-
 			j++ // skip the '[' character
 
 			negate := false
@@ -135,15 +132,9 @@ func stringMatch(str string, pattern string) bool {
 				}
 			}
 
-			// revert to previous state, the '[' was just a literal
+			// unclosed character class, return no match
 			if j == len(pattern) {
-				i = prevI
-				j = prevJ
-				if str[i] != pattern[j] {
-					return false
-				}
-				j++
-				break
+				return false
 			}
 
 			j++
