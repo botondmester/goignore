@@ -1,6 +1,7 @@
 package goignore
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -282,15 +283,13 @@ func matchComponents(path []string, components []string) (matches bool, final bo
 
 // Tries to match the path against the rule
 // the function expects a buffer of sufficient size to get passed to it, this avoids excessive memory allocation
-func (r *Rule) matchesPath(path string, pathComponents []string) bool {
-	hasSuffix := strings.HasSuffix(path, "/")
-
+func (r *Rule) matchesPath(isDirectory bool, pathComponents []string) bool {
 	if !r.Relative {
 		// stinky recursive step
-		for j := len(pathComponents) - 1; j >= 0; j-- {
+		for j := 0; j < len(pathComponents); j++ {
 			match, final := matchComponents(pathComponents[j:], r.Components)
 			if match {
-				return !r.OnlyDirectory || r.OnlyDirectory && (!final || final && hasSuffix)
+				return !r.OnlyDirectory || r.OnlyDirectory && (!final || final && isDirectory)
 			}
 		}
 
@@ -299,7 +298,7 @@ func (r *Rule) matchesPath(path string, pathComponents []string) bool {
 
 	match, final := matchComponents(pathComponents, r.Components)
 
-	return match && (!r.OnlyDirectory || r.OnlyDirectory && (!final || final && hasSuffix))
+	return match && (!r.OnlyDirectory || r.OnlyDirectory && (!final || final && isDirectory))
 }
 
 // Stores a list of rules for matching paths against .gitignore patterns
@@ -376,12 +375,25 @@ func createRule(pattern string) Rule {
 
 // Tries to match the path to all the rules in the gitignore
 func (g *GitIgnore) MatchesPath(path string) bool {
+	// TODO: check if path actually points to a directory on the filesystem
+	isDir := strings.HasSuffix(path, "/")
+	path = filepath.Clean(path)
 	path = filepath.ToSlash(path)
+	if path == "." {
+		path = "/"
+		isDir = true
+	}
+	if path == "*" {
+		return false
+	}
+	if !fs.ValidPath(path) {
+		return false
+	}
 	pathComponents := mySplitBuf(path, '/', g.pathComponentsBuf)
 	matched := false
 
 	for _, rule := range g.Rules {
-		if rule.matchesPath(path, pathComponents) {
+		if rule.matchesPath(isDir, pathComponents) {
 			if !rule.Negate {
 				matched = true
 			} else {

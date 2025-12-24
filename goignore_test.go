@@ -220,10 +220,10 @@ func TestWildCardFiles(t *testing.T) {
 	assert.Equal(t, true, ignoreObject.MatchesPath("something/else/but/it/hasyo.swp"), "should ignore all swp files in other directories")
 
 	assert.Equal(t, true, ignoreObject.MatchesPath("foo/bar.wat"), "should ignore all wat files in foo - nonpreceding /")
-	assert.Equal(t, true, ignoreObject.MatchesPath("/foo/something.wat"), "should ignore all wat files in foo - preceding /")
+	assert.Equal(t, false, ignoreObject.MatchesPath("/foo/something.wat"), "should not ignore all wat files in foo - preceding /")
 
 	assert.Equal(t, true, ignoreObject.MatchesPath("bar/something.txt"), "should ignore all txt files in bar - nonpreceding /")
-	assert.Equal(t, true, ignoreObject.MatchesPath("/bar/somethingelse.txt"), "should ignore all txt files in bar - preceding /")
+	assert.Equal(t, false, ignoreObject.MatchesPath("/bar/somethingelse.txt"), "should not ignore all txt files in bar - preceding /")
 
 	// Paths which are not targeted by the above "lines"
 	assert.Equal(t, false, ignoreObject.MatchesPath("something/not/infoo/wat.wat"), "wat files should only be ignored in foo")
@@ -237,11 +237,11 @@ func TestPrecedingSlash(t *testing.T) {
 	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
 
 	assert.Equal(t, true, ignoreObject.MatchesPath("foo/bar.wat"), "should ignore all files in foo - nonpreceding /")
-	assert.Equal(t, true, ignoreObject.MatchesPath("/foo/something.txt"), "should ignore all files in foo - preceding /")
+	assert.Equal(t, false, ignoreObject.MatchesPath("/foo/something.txt"), "should not ignore all files in foo - preceding /")
 
 	assert.Equal(t, true, ignoreObject.MatchesPath("bar/something.txt"), "should ignore all files in bar - nonpreceding /")
-	assert.Equal(t, true, ignoreObject.MatchesPath("/bar/somethingelse.go"), "should ignore all files in bar - preceding /")
-	assert.Equal(t, true, ignoreObject.MatchesPath("/boo/something/bar/boo.txt"), "should block all files if bar is a sub directory")
+	assert.Equal(t, false, ignoreObject.MatchesPath("/bar/somethingelse.go"), "should not ignore all files in bar - preceding /")
+	assert.Equal(t, false, ignoreObject.MatchesPath("/boo/something/bar/boo.txt"), "should not ignore all files if bar is a sub directory")
 
 	assert.Equal(t, false, ignoreObject.MatchesPath("something/foo/something.txt"), "should only ignore top level foo directories - not nested")
 }
@@ -347,6 +347,17 @@ func TestEscaping(t *testing.T) {
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye[]"), "should not match bye[]")
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye["), "should not match bye[")
 	assert.Equal(t, false, ignoreObject.MatchesPath("bye[\\]"), "should not match bye[\\]")
+}
+
+func TestFolders(t *testing.T) {
+	gitIgnore := []string{"Folder/"}
+	ignoreObject := CompileIgnoreLines(gitIgnore)
+
+	assert.NotNil(t, ignoreObject, "Returned object should not be nil")
+	assert.Equal(t, true, ignoreObject.MatchesPath("Folder/Folder"), "should match Folder/Folder")
+	assert.Equal(t, true, ignoreObject.MatchesPath("Folder/Buzz"), "should match Folder/Buzz")
+	assert.Equal(t, true, ignoreObject.MatchesPath("Bar/Folder/"), "should match Bar/Folder/")
+	assert.Equal(t, false, ignoreObject.MatchesPath("Fizz/Folder"), "should not match Fizz/Folder")
 }
 
 func FuzzStringMatch(f *testing.F) {
