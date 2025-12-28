@@ -360,7 +360,8 @@ func TestFolders(t *testing.T) {
 	assert.Equal(t, false, ignoreObject.MatchesPath("Fizz/Folder"), "should not match Fizz/Folder")
 }
 
-func TestMySplitBuf(t *testing.T) {
+// Test for both mySplit() and mySplitBuf()
+func TestMySplit(t *testing.T) {
 	type TestCase struct {
 		str       string
 		separator byte
@@ -378,8 +379,11 @@ func TestMySplitBuf(t *testing.T) {
 	buffer := make([]string, 2048)
 
 	for _, test := range tests {
-		result := mySplitBuf(test.str, test.separator, buffer)
-		assert.Equal(t, test.expected, result)
+		mySplitBufResult := mySplitBuf(test.str, test.separator, buffer)
+		assert.Equal(t, test.expected, mySplitBufResult)
+
+		mySplitResult := mySplit(test.str, test.separator)
+		assert.Equal(t, test.expected, mySplitResult)
 	}
 }
 
