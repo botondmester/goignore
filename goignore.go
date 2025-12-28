@@ -1,23 +1,17 @@
 package goignore
 
 import (
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
-
-func bufferLengthForPathComponents() int {
-	return 2048
-}
 
 // this is my own implementation of strings.Split()
 // for my use case, this is way faster than the stdlib one
 // the function expects a slice of sufficient length to get passed to it,
 // this avoids unnecessary memory allocation
-func mySplitBuf(s string, sep byte, pathComponentsBuf []string) ([]string, error) {
+func mySplitBuf(s string, sep byte, pathComponentsBuf []string) []string {
 	idx := 0
 	l := 0
 	for {
@@ -29,9 +23,6 @@ func mySplitBuf(s string, sep byte, pathComponentsBuf []string) ([]string, error
 
 		absolutePos := l + pos
 		if absolutePos > l {
-			if idx >= len(pathComponentsBuf) {
-				return nil, errors.New("exceeded string split buffer of length" + strconv.Itoa(len(pathComponentsBuf)))
-			}
 			pathComponentsBuf[idx] = s[l:absolutePos]
 			idx++
 		}
@@ -39,15 +30,12 @@ func mySplitBuf(s string, sep byte, pathComponentsBuf []string) ([]string, error
 	}
 	// handle the last part separately
 	if l < len(s) {
-		if idx >= len(pathComponentsBuf) {
-			return nil, errors.New("exceeded string split buffer of length" + strconv.Itoa(len(pathComponentsBuf)))
-		}
 		pathComponentsBuf[idx] = s[l:]
 		idx++
 	}
 
 	// truncate the slice to the actual number of components
-	return pathComponentsBuf[:idx], nil
+	return pathComponentsBuf[:idx]
 }
 
 // this is my own implementation of strings.Split()
@@ -324,7 +312,7 @@ type GitIgnore struct {
 func CompileIgnoreLines(patterns []string) *GitIgnore {
 	gitignore := &GitIgnore{
 		Rules:             make([]Rule, 0, len(patterns)),
-		pathComponentsBuf: make([]string, bufferLengthForPathComponents()),
+		pathComponentsBuf: make([]string, 2048),
 	}
 
 	for _, pattern := range patterns {
@@ -385,15 +373,8 @@ func createRule(pattern string) Rule {
 	}
 }
 
-// This calls MatchesPath() but emits the error.
-func (g *GitIgnore) matchesPathUnsafe(path string) bool {
-	result, _ := g.MatchesPath(path)
-	return result
-}
-
-// Tries to match the path to all the rules in the gitignore.
-// Returns an error if the path contains more than 2048 path separators.
-func (g *GitIgnore) MatchesPath(path string) (bool, error) {
+// Tries to match the path to all the rules in the gitignore
+func (g *GitIgnore) MatchesPath(path string) bool {
 	// TODO: check if path actually points to a directory on the filesystem
 	isDir := strings.HasSuffix(path, "/")
 	path = filepath.Clean(path)
@@ -403,15 +384,12 @@ func (g *GitIgnore) MatchesPath(path string) (bool, error) {
 		isDir = true
 	}
 	if path == "*" {
-		return false, nil
+		return false
 	}
 	if !fs.ValidPath(path) {
-		return false, nil
+		return false
 	}
-	pathComponents, err := mySplitBuf(path, '/', g.pathComponentsBuf)
-	if err != nil {
-		return false, err
-	}
+	pathComponents := mySplitBuf(path, '/', g.pathComponentsBuf)
 	matched := false
 
 	for _, rule := range g.Rules {
@@ -423,5 +401,5 @@ func (g *GitIgnore) MatchesPath(path string) (bool, error) {
 			}
 		}
 	}
-	return matched, nil
+	return matched
 }
