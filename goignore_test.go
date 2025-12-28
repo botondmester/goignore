@@ -360,6 +360,29 @@ func TestFolders(t *testing.T) {
 	assert.Equal(t, false, ignoreObject.MatchesPath("Fizz/Folder"), "should not match Fizz/Folder")
 }
 
+func TestMySplitBuf(t *testing.T) {
+	type TestCase struct {
+		str       string
+		separator byte
+		expected  []string
+	}
+
+	tests := []TestCase{
+		{"this is a test", ' ', []string{"this", "is", "a", "test"}},
+		{"dontsplit", ' ', []string{"dontsplit"}},
+		{"", ' ', []string{}},
+		{"aaaaa", 'a', []string{}},
+	}
+
+	// mySplitBuf expects a buffer slice of sufficient length.
+	buffer := make([]string, 2048)
+
+	for _, test := range tests {
+		result := mySplitBuf(test.str, test.separator, buffer)
+		assert.Equal(t, test.expected, result)
+	}
+}
+
 func FuzzStringMatch(f *testing.F) {
 	f.Add("hello, world!", "hell*[oasd], [[:alpha:]]orld!")
 	f.Add("hello, world!", "hell*[!asd], [![:digit:]]orld!")
